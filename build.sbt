@@ -19,7 +19,6 @@ scalacOptions in Global := Seq(
   "-Ywarn-dead-code", // Warn when dead code is identified.
   "-Ywarn-nullary-unit", // Warn when nullary methods return Unit.
   "-Ywarn-numeric-widen", // Warn when numerics are widened.
-  "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
   "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
   "-Ywarn-unused:locals", // Warn if a local definition is unused.
   "-Ywarn-unused:params", // Warn if a value parameter is unused.
@@ -43,6 +42,7 @@ lazy val root = (project in file(".")).settings(
     playJson,
     scalaMeta,
     shapeless,
-    scalaTest % Test
+    scalaTest % Test,
+    scalaCheck % Test
   )
 )
