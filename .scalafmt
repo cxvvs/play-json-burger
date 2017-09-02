@@ -1,0 +1,10 @@
+style = defaultWithAlign
+
+align = most
+align.openParenDefnSite = false
+continuationIndent.defnSite = 2
+danglingParentheses = true
+docstrings = JavaDoc
+maxColumn = 120
+rewrite.rules = [RedundantParens, SortImports]
+unindentTopLevelOperators = true
