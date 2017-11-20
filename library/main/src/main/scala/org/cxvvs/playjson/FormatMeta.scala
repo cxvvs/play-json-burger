@@ -11,12 +11,13 @@ object FormatMeta {
 final class FormatMetaBuilder[T] {
   def from[HLIST <: HList, REVERSE <: HList](
       builder: Builder[HLIST]
-  )(implicit
-    _reverse: Reverse.Aux[HLIST, REVERSE],
+  )(implicit _reverse: Reverse.Aux[HLIST, REVERSE],
     generic: Generic.Aux[T, REVERSE]): OFormat[T] = new OFormat[T] {
     def reads(json: JsValue): JsResult[T] = {
       val validated: List[JsResult[_]] = builder.formatList.map(_.reads(json))
-      val errors: List[JsError] = validated.collect { case err: JsError => err }
+      val errors: List[JsError] = validated.collect {
+        case err: JsError => err
+      }
 
       if (errors.nonEmpty) {
         errors.foldLeft(JsError(Nil)) { case (acc, err) => acc ++ err }

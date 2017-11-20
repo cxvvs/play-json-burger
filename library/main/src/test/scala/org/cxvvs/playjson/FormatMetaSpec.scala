@@ -24,25 +24,26 @@ class FormatMetaSpec extends FlatSpec with Checkers with Matchers {
     val macroReads = testClassMacroFormat.reads _
     val metaReads = testClassFormatMeta.reads _
 
-    check { (a: Int, b: String, c: Either[String, Double], d: Option[String]) =>
-      val jsValue = Json.obj(
-        "a" -> a,
-        "b" -> b
-      ) ++ (
-        c match {
-          case Left(cString)  => Json.obj("c" -> cString)
-          case Right(cDouble) => Json.obj("c" -> cDouble)
-        }
-      ) ++ (
-        d.map(dd => Json.obj("d" -> dd)).getOrElse(Json.obj())
-      )
+    check {
+      (a: Int, b: String, c: Either[String, Double], d: Option[String]) =>
+        val jsValue = Json.obj(
+          "a" -> a,
+          "b" -> b
+        ) ++ (
+          c match {
+            case Left(cString) => Json.obj("c" -> cString)
+            case Right(cDouble) => Json.obj("c" -> cDouble)
+          }
+        ) ++ (
+          d.map(dd => Json.obj("d" -> dd)).getOrElse(Json.obj())
+        )
 
-      (macroReads(jsValue), metaReads(jsValue)) match {
-        case (JsSuccess(value1, _), JsSuccess(value2, _)) => value1 == value2
-        case (JsError(macroErrors), JsError(metaErrors)) =>
-          macroErrors.toSet == metaErrors.toSet
-        case _ => false
-      }
+        (macroReads(jsValue), metaReads(jsValue)) match {
+          case (JsSuccess(value1, _), JsSuccess(value2, _)) => value1 == value2
+          case (JsError(macroErrors), JsError(metaErrors)) =>
+            macroErrors.toSet == metaErrors.toSet
+          case _ => false
+        }
     }
   }
 

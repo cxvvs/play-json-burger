@@ -30,7 +30,7 @@ scalacOptions in Global := Seq(
 scalafmtVersion := "1.2.0"
 scalafmtOnCompile in ThisBuild := true
 
-lazy val root = (project in file(".")).settings(
+lazy val library = (project in file("library/main")).settings(
   inThisBuild(
     List(
       organization := "org.cxvvs",
