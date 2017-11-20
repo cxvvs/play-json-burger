@@ -1,6 +1,6 @@
 import Dependencies._
 
-scalaVersion in ThisBuild := "2.12.2"
+scalaVersion in ThisBuild := "2.12.4"
 
 scalacOptions in Global := Seq(
   "-deprecation", // Emit warning and location for usages of deprecated APIs.
@@ -34,7 +34,6 @@ lazy val root = (project in file(".")).settings(
   inThisBuild(
     List(
       organization := "org.cxvvs",
-      scalaVersion := "2.12.1",
       version := "0.1.0-SNAPSHOT"
     )),
   name := "playjson-meta",
