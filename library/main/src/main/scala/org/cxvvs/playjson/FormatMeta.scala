@@ -1,7 +1,7 @@
 package org.cxvvs.playjson
 
 import play.api.libs.json._
-import shapeless.{::, Generic, HList, HNil}
+import shapeless.{::, Generic, HList}
 import shapeless.ops.hlist.Reverse
 
 object FormatMeta {
@@ -13,24 +13,8 @@ final class FormatMetaBuilder[T] {
       builder: Builder[HLIST]
   )(implicit _reverse: Reverse.Aux[HLIST, REVERSE],
     generic: Generic.Aux[T, REVERSE]): OFormat[T] = new OFormat[T] {
-    def reads(json: JsValue): JsResult[T] = {
-      val validated: List[JsResult[_]] = builder.formatList.map(_.reads(json))
-      val errors: List[JsError] = validated.collect {
-        case err: JsError => err
-      }
-
-      if (errors.nonEmpty) {
-        errors.foldLeft(JsError(Nil)) { case (acc, err) => acc ++ err }
-      } else {
-        val successHlist: REVERSE = validated
-          .collect { case JsSuccess(value, _) => value }
-          .reverse
-          .foldLeft[HList](HNil) { case (hlist, value) => value :: hlist }
-          .asInstanceOf[REVERSE]
-
-        JsSuccess(generic.from(successHlist))
-      }
-    }
+    def reads(json: JsValue): JsResult[T] =
+      ReadsMetaBuilder.reads(json, builder.formatList, generic)
 
     def writes(o: T): JsObject = {
       generic
