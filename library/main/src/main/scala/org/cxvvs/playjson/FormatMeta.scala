@@ -16,18 +16,8 @@ final class FormatMetaBuilder[T] {
     def reads(json: JsValue): JsResult[T] =
       ReadsMetaBuilder.reads(json, builder.formatList, generic)
 
-    def writes(o: T): JsObject = {
-      generic
-        .to(o)
-        .runtimeList
-        .zip(builder.formatList)
-        .foldLeft(Json.obj()) {
-          case (acc, (value, format)) =>
-            acc ++ format
-              .asInstanceOf[OFormat[Any]]
-              .writes(value.asInstanceOf[Any])
-        }
-    }
+    def writes(o: T): JsObject =
+      WritesMetaBuilder.writes(o, builder.formatList, generic)
   }
 }
 

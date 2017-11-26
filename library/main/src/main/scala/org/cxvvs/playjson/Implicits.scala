@@ -1,7 +1,7 @@
 package org.cxvvs.playjson
 
 import scala.language.implicitConversions
-import play.api.libs.json.{OFormat, Reads}
+import play.api.libs.json.{OFormat, OWrites, Reads}
 import shapeless.{::, HNil}
 
 object Implicits {
@@ -10,4 +10,7 @@ object Implicits {
 
   implicit def readsToBuilder[T](read: Reads[T]): ReadsBuilder[T :: HNil] =
     new ReadsBuilder[T :: HNil](List(read))
+
+  implicit def writesToBuilder[T](writes: OWrites[T]): WritesBuilder[T :: HNil] =
+    new WritesBuilder[T :: HNil](List(writes))
 }
