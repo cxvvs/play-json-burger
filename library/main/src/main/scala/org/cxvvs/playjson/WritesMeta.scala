@@ -1,7 +1,8 @@
 package org.cxvvs.playjson
 
-import play.api.libs.json._
-import shapeless.{::, Generic, HList}
+import org.cxvvs.playjson.builders.WritesBuilder
+import play.api.libs.json.{Json, JsObject, OWrites, Writes}
+import shapeless.{Generic, HList}
 import shapeless.ops.hlist.Reverse
 
 object WritesMeta {
@@ -45,14 +46,4 @@ private[playjson] object WritesMetaBuilder {
             .writes(value.asInstanceOf[Any])
       }
   }
-}
-
-private[playjson] class WritesBuilder[HLIST <: HList](
-  val writesList: List[OWrites[_]]
-) {
-  def and[B](writes: OWrites[B]): WritesBuilder[B :: HLIST] =
-    new WritesBuilder[B :: HLIST](writesList :+ writes)
-
-  def ~[B](writes: OWrites[B]): WritesBuilder[B :: HLIST] =
-    and(writes)
 }

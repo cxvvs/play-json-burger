@@ -1,5 +1,7 @@
 package org.cxvvs.playjson
 
+import org.cxvvs.playjson.builders.{FormatBuilder, ReadsBuilder, WritesBuilder}
+
 import scala.language.implicitConversions
 import play.api.libs.json.{OFormat, OWrites, Reads}
 import shapeless.{::, HNil}

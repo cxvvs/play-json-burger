@@ -1,7 +1,8 @@
 package org.cxvvs.playjson
 
-import play.api.libs.json._
-import shapeless.{::, Generic, HList}
+import org.cxvvs.playjson.builders.FormatBuilder
+import play.api.libs.json.{JsObject, JsResult, JsValue, OFormat}
+import shapeless.{Generic, HList}
 import shapeless.ops.hlist.Reverse
 
 object FormatMeta {
@@ -19,14 +20,4 @@ final class FormatMetaBuilder[T] {
     def writes(o: T): JsObject =
       WritesMetaBuilder.writes(o, builder.formatList, generic)
   }
-}
-
-private[playjson] class FormatBuilder[HLIST <: HList](
-    val formatList: List[OFormat[_]]
-) {
-  def and[B](format: OFormat[B]): FormatBuilder[B :: HLIST] =
-    new FormatBuilder[B :: HLIST](formatList :+ format)
-
-  def ~[B](format: OFormat[B]): FormatBuilder[B :: HLIST] =
-    and(format)
 }

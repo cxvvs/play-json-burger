@@ -1,7 +1,8 @@
 package org.cxvvs.playjson
 
-import play.api.libs.json._
-import shapeless.{::, Generic, HList, HNil}
+import org.cxvvs.playjson.builders.ReadsBuilder
+import play.api.libs.json.{JsError, JsResult, JsSuccess, JsValue, Reads}
+import shapeless.{Generic, HList, HNil}
 import shapeless.ops.hlist.Reverse
 
 object ReadsMeta {
@@ -41,14 +42,4 @@ private[playjson] object ReadsMetaBuilder {
       JsSuccess(generic.from(successHlist))
     }
   }
-}
-
-private[playjson] class ReadsBuilder[HLIST <: HList](
-  val readList: List[Reads[_]]
-) {
-  def and[B](read: Reads[B]): ReadsBuilder[B :: HLIST] =
-    new ReadsBuilder[B :: HLIST](readList :+ read)
-
-  def ~[B](read: Reads[B]): ReadsBuilder[B :: HLIST] =
-    and(read)
 }
