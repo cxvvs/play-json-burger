@@ -10,7 +10,7 @@ object FormatMeta {
 
 final class FormatMetaBuilder[T] {
   def from[HLIST <: HList, REVERSE <: HList](
-      builder: Builder[HLIST]
+      builder: FormatBuilder[HLIST]
   )(implicit _reverse: Reverse.Aux[HLIST, REVERSE],
     generic: Generic.Aux[T, REVERSE]): OFormat[T] = new OFormat[T] {
     def reads(json: JsValue): JsResult[T] =
@@ -31,12 +31,12 @@ final class FormatMetaBuilder[T] {
   }
 }
 
-private[playjson] class Builder[HLIST <: HList](
+private[playjson] class FormatBuilder[HLIST <: HList](
     val formatList: List[OFormat[_]]
 ) {
-  def and[B](format: OFormat[B]): Builder[B :: HLIST] =
-    new Builder[B :: HLIST](formatList :+ format)
+  def and[B](format: OFormat[B]): FormatBuilder[B :: HLIST] =
+    new FormatBuilder[B :: HLIST](formatList :+ format)
 
-  def ~[B](format: OFormat[B]): Builder[B :: HLIST] =
+  def ~[B](format: OFormat[B]): FormatBuilder[B :: HLIST] =
     and(format)
 }
