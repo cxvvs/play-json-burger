@@ -8,17 +8,26 @@ import scala.meta._
 class JsonFormat extends scala.annotation.StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
 
-    def paramType(argType: Type.Arg): Type = {
-      Type.Name(argType.syntax)
+    def fieldFormat(jsPath: Term, argType: Type.Arg): Term.ApplyType = {
+      val option = """Option\[(.+)]""".r
+
+      argType.syntax match {
+        case option(rawType) =>
+          val tpe = Type.Name(rawType)
+          q"$jsPath.formatNullable[$tpe]"
+
+        case rawType =>
+          val tpe = Type.Name(rawType)
+          q"$jsPath.format[$tpe]"
+      }
     }
 
     def createFormat(name: Type.Name, ctor: Ctor.Primary): Defn.Def = {
       val paramsFormat: Seq[Term.ApplyType] = ctor.paramss.head
         .map { parameter =>
           val fieldName: String = parameter.name.value
-          val fieldType: Type = paramType(parameter.decltpe.get)
-          // TODO : Handle nullable if Opt
-          q"""(play.api.libs.json.JsPath \ $fieldName).format[$fieldType]"""
+          val jsPath: Term = q"""(play.api.libs.json.JsPath \ $fieldName)"""
+          fieldFormat(jsPath, parameter.decltpe.get)
         }
 
       val concatParams = paramsFormat
