@@ -12,8 +12,10 @@ object WritesMeta {
 final class WritesMetaBuilder[T] {
   def from[HLIST <: HList, REVERSE <: HList](
     builder: WritesBuilder[HLIST]
-  )(implicit _reverse: Reverse.Aux[HLIST, REVERSE],
-    generic: Generic.Aux[T, REVERSE]): OWrites[T] = new OWrites[T] {
+  )(implicit
+    _reverse: Reverse.Aux[HLIST, REVERSE],
+    generic: Generic.Aux[T, REVERSE]
+  ): OWrites[T] = new OWrites[T] {
     def writes(o: T): JsObject = {
       generic
         .to(o)

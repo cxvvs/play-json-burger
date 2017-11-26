@@ -12,8 +12,10 @@ object FormatMeta {
 final class FormatMetaBuilder[T] {
   def from[HLIST <: HList, REVERSE <: HList](
       builder: FormatBuilder[HLIST]
-  )(implicit _reverse: Reverse.Aux[HLIST, REVERSE],
-    generic: Generic.Aux[T, REVERSE]): OFormat[T] = new OFormat[T] {
+  )(implicit
+    _reverse: Reverse.Aux[HLIST, REVERSE],
+    generic: Generic.Aux[T, REVERSE]
+  ): OFormat[T] = new OFormat[T] {
     def reads(json: JsValue): JsResult[T] =
       ReadsMetaBuilder.reads(json, builder.formatList, generic)
 

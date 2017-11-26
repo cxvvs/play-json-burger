@@ -12,8 +12,10 @@ object ReadsMeta {
 final class ReadsMetaBuilder[T] {
   def from[HLIST <: HList, REVERSE <: HList](
     builder: ReadsBuilder[HLIST]
-  )(implicit _reverse: Reverse.Aux[HLIST, REVERSE],
-    generic: Generic.Aux[T, REVERSE]): Reads[T] = new Reads[T] {
+  )(implicit
+    _reverse: Reverse.Aux[HLIST, REVERSE],
+    generic: Generic.Aux[T, REVERSE]
+  ): Reads[T] = new Reads[T] {
     def reads(json: JsValue): JsResult[T] =
       ReadsMetaBuilder.reads(json, builder.readList, generic)
   }
