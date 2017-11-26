@@ -52,4 +52,7 @@ private[playjson] class Builder[HLIST <: HList](
 ) {
   def and[B](format: OFormat[B]): Builder[B :: HLIST] =
     new Builder[B :: HLIST](formatList :+ format)
+
+  def ~[B](format: OFormat[B]): Builder[B :: HLIST] =
+    and(format)
 }
