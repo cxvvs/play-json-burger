@@ -19,7 +19,7 @@ final class ReadsMetaBuilder[T] {
 }
 
 private[playjson] object ReadsMetaBuilder {
-  def reads[HLIST, T](
+  def reads[HLIST <: HList, T](
     json: JsValue,
     readList: List[Reads[_]],
     generic: Generic.Aux[T, HLIST]
