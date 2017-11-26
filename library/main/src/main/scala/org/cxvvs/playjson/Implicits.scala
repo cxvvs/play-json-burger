@@ -1,5 +1,7 @@
 package org.cxvvs.playjson
 
+import scala.language.implicitConversions
+
 import play.api.libs.json.OFormat
 import shapeless.{::, HNil}
 
