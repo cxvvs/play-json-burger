@@ -1,7 +1,5 @@
 import Dependencies._
 
-scalaVersion in ThisBuild := "2.12.4"
-
 scalacOptions in Global := Seq(
   "-deprecation", // Emit warning and location for usages of deprecated APIs.
   "-encoding",
@@ -20,28 +18,31 @@ scalacOptions in Global := Seq(
   "-Ywarn-nullary-unit", // Warn when nullary methods return Unit.
   "-Ywarn-numeric-widen", // Warn when numerics are widened.
   "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
-  "-Ywarn-unused:locals", // Warn if a local definition is unused.
-  "-Ywarn-unused:params", // Warn if a value parameter is unused.
-  "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
-  "-Ywarn-unused:privates", // Warn if a private member is unused.
   "-Ywarn-value-discard" // Warn when non-Unit expression results are unused.
 )
 
-scalafmtVersion := "1.2.0"
-scalafmtOnCompile in ThisBuild := true
+name := "playjson-burger"
 
-lazy val library = (project in file("library/main")).settings(
-  inThisBuild(
-    List(
-      organization := "org.cxvvs",
-      version := "0.1.0-SNAPSHOT"
-    )),
-  name := "playjson-meta",
-  libraryDependencies ++= Seq(
-    playJson,
-    scalaMeta,
-    shapeless,
-    scalaTest % Test,
-    scalaCheck % Test
-  )
+lazy val commonSettings = Seq(
+  version := "0.1",
+  scalaVersion := "2.12.3"
 )
+
+lazy val macroSettings = Seq(
+  scalacOptions += "-Xplugin-require:macroparadise",
+  addCompilerPlugin(
+    "org.scalameta" % "paradise" % "3.0.0-M10" cross CrossVersion.full)
+)
+
+lazy val library = (project in file("library/main"))
+  .settings(commonSettings: _*)
+  .settings(macroSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      playJson,
+      scalaMeta,
+      shapeless,
+      scalaTest % Test,
+      scalaCheck % Test
+    )
+  )
