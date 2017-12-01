@@ -34,7 +34,7 @@ lazy val macroSettings = Seq(
     "org.scalameta" % "paradise" % "3.0.0-M10" cross CrossVersion.full)
 )
 
-lazy val library = (project in file("library/main"))
+lazy val library = (project in file("library"))
   .settings(commonSettings: _*)
   .settings(macroSettings: _*)
   .settings(
