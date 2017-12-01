@@ -14,15 +14,19 @@ class MacroSpec extends FlatSpec with Checkers {
     object Testing {
       implicit val format: OFormat[Testing] = macroFormat
     }
-    val value = Testing(42, "Mario")
-    val jsonValue = Json.obj("a" -> 42, "b" -> "Mario")
-    val testingReads: Reads[Testing] = implicitly[Reads[Testing]]
 
-    // When
-    val readValue = testingReads.reads(jsonValue)
+    check {
+      (a: Int, b: String) =>
+        val value = Testing(a, b)
+        val jsonValue = Json.obj("a" -> a, "b" -> b)
+        val testingReads: Reads[Testing] = implicitly[Reads[Testing]]
 
-    // Then
-    assert(readValue == JsSuccess(value))
+        // When
+        val readValue = testingReads.reads(jsonValue)
+
+        // Then
+        readValue == JsSuccess(value)
+    }
   }
 
   "Format Macro" should "correctly handle optional fields" in {
