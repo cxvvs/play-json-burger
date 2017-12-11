@@ -12,7 +12,7 @@ class MacroSpec extends FlatSpec with Checkers {
     @JsonFormat
     case class Testing(a: Int, b: String)
     object Testing {
-      implicit val format: OFormat[Testing] = macroFormat
+      implicit val format: OFormat[Testing] = preparedFormat.build
     }
 
     check {
@@ -34,7 +34,7 @@ class MacroSpec extends FlatSpec with Checkers {
     @JsonFormat
     case class Testing(a: Int, b: String, c: Option[Int])
     object Testing {
-      implicit val format: OFormat[Testing] = macroFormat
+      implicit val format: OFormat[Testing] = preparedFormat.build
     }
 
     check {
