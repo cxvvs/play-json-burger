@@ -8,10 +8,20 @@ import scala.meta._
 class JsonFormat extends scala.annotation.StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
 
-    def declarePreparedTrait(typeName: Type.Name): Defn.Trait = {
+    def declarePreparedTrait(className: Type.Name, ctor: Ctor.Primary): Defn.Trait = {
+
+      val readsModifiers: Seq[Decl.Def] = ctor.paramss.head
+        .map { parameter =>
+          val fieldName: String = parameter.name.value
+          val TypeInfo(typeName, _) = JsonFormat.getType(parameter.decltpe.get)
+          val methodName: Term.Name = Term.Name(s"${fieldName}Read")
+          q"def $methodName(reads: play.api.libs.json.Reads[$typeName]): PreparedFormat"
+        }
+
       q"""
         trait PreparedFormat {
-          def build: play.api.libs.json.OFormat[$typeName]
+          ..$readsModifiers;
+          def build: play.api.libs.json.OFormat[$className]
         }
        """
     }
@@ -26,7 +36,7 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
         q"$jsPath.format[$typeName]"
     }
 
-    def createFormat(name: Type.Name, ctor: Ctor.Primary): Defn.Def = {
+    def createFormat(className: Type.Name, ctor: Ctor.Primary): Defn.Def = {
       val paramsFormat: Seq[Term.ApplyType] = ctor.paramss.head
         .map { parameter =>
           val fieldName: String = parameter.name.value
@@ -40,25 +50,77 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
           case (acc, current) => q"$acc and $current"
         }
 
-      val readFields: Seq[Defn.Val] = ctor.paramss.head
-        .map { case parameter =>
+      def readFields(getFieldName: (String) => Term.Name): Seq[Defn.Val] = ctor.paramss.head
+        .map { parameter =>
           val fieldName: String = parameter.name.value
-          val TypeInfo(typeName, isOption) = JsonFormat.getType(parameter.decltpe.get)
-          val readFieldName: Term.Name = Term.Name(s"read$fieldName")
-          val patVarTerm: Pat.Var.Term = Pat.Var.Term(readFieldName)
-          q"val $patVarTerm: Option[play.api.libs.json.Reads[$typeName]] = None"
+          val TypeInfo(typeName, _) = JsonFormat.getType(parameter.decltpe.get)
+          val patVarTerm: Pat.Var.Term = Pat.Var.Term(Term.Name(s"read$fieldName"))
+          q"val $patVarTerm: Option[play.api.libs.json.Reads[$typeName]] = ${getFieldName(fieldName)}"
         }
+
+      // TODO : Remove copy paste (defined in trait)
+      val readModifiers: Seq[Defn.Def] = ctor.paramss.head
+        .map { parameter =>
+          val fieldName: String = parameter.name.value
+          val TypeInfo(typeName, _) = JsonFormat.getType(parameter.decltpe.get)
+          val methodName: Term.Name = Term.Name(s"${fieldName}Read")
+          val readFieldName: Term.Name = Term.Name(s"replace$fieldName")
+          q"""
+              def $methodName(reads: play.api.libs.json.Reads[$typeName]): PreparedFormat =
+                this.copy($readFieldName = Some(reads))
+            """
+        }
+
+      val copyFields: Seq[Term.Param] = ctor.paramss.head
+        .map { ctorParameter =>
+          // Parameter name : replaceXXX
+          val parameterName: Term.Param.Name = Term.Name(s"replace${ctorParameter.name}")
+          val TypeInfo(typeName, _) = JsonFormat.getType(ctorParameter.decltpe.get)
+          val readType: Type.Name = Type.Name(s"Option[play.api.libs.json.Reads[$typeName]]")
+
+          // Default value : readXXX
+          val defaultValue: Term.Name = Term.Name(s"read${ctorParameter.name}")
+
+          param"$parameterName: $readType = $defaultValue"
+        }
+
+      val copyParameterNames: Seq[Term.Name] = ctor.paramss.head
+          .map { ctorParameter => Term.Name(s"replace${ctorParameter.name}") }
+
+      val copyIncantation: Defn.Def =
+        q"""
+            def copy(..$copyFields): PreparedFormat = originalCopy(..$copyParameterNames)
+         """
+
+      val buildIncantation: Defn.Def =
+        q"""
+            def build: play.api.libs.json.OFormat[$className] = {
+              import org.cxvvs.playjson.Implicits._
+              org.cxvvs.playjson.FormatMeta[$className].from($concatParams)
+            }
+         """
+
+      val originalCopyMethod: Defn.Def =
+        q"""
+            def originalCopy(..$copyFields): PreparedFormat = new PreparedFormat {
+              ..${readFields(fieldName => Term.Name(s"replace$fieldName"))}
+              ..$readModifiers
+              $copyIncantation
+              $buildIncantation
+            }
+         """
 
       val result = q"""
         def preparedFormat: PreparedFormat =
           new PreparedFormat {
 
-            ..$readFields;
+            ..${readFields(_ => q"None")};
+            ..$readModifiers;
 
-            def build: play.api.libs.json.OFormat[$name] = {
-              import org.cxvvs.playjson.Implicits._
-              org.cxvvs.playjson.FormatMeta[$name].from($concatParams)
-            }
+            $originalCopyMethod;
+            $copyIncantation;
+
+            $buildIncantation;
           }
       """
 
@@ -69,11 +131,12 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
 
     defn match {
       case Term.Block(Seq(
-        cls @ Defn.Class(_, name, _, ctor, template),
+        cls @ Defn.Class(_, className, _, ctor, template),
         companion: Defn.Object
       )) =>
-        val stats: Seq[Stat] = declarePreparedTrait(name) +:
-          createFormat(name, ctor) +:
+        val stats: Seq[Stat] =
+          declarePreparedTrait(className, ctor) +:
+          createFormat(className, ctor) +:
           companion.templ.stats.getOrElse(Nil)
         val template: Template = companion.templ.copy(stats = Some(stats))
         val augmentedCompanion = companion.copy(templ = template)
