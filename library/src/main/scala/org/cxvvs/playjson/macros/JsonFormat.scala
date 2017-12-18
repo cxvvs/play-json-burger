@@ -174,7 +174,7 @@ object JsonFormat {
     *
     * This function manually handles that case
     */
-  def withConstraintOpt[T : Reads](
+  def withConstraintOpt[T](
     jsPath: JsPath,
     format: OFormat[Option[T]],
     optReads: Option[Reads[T]]
@@ -183,7 +183,7 @@ object JsonFormat {
       def reads(json: JsValue): JsResult[Option[T]] = {
         val originalReads: Reads[Option[T]] = Reads(format.reads)
         optReads
-          .map(reads => Reads.nullable(jsPath)(implicitly[Reads[T]]))
+          .map(reads => Reads.nullable(jsPath)(reads))
           .getOrElse(originalReads)
           .reads(json)
       }
