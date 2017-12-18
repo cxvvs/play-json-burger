@@ -3,7 +3,7 @@ package org.cxvvs.playjson
 import org.cxvvs.playjson.macros.JsonFormat
 import org.scalatest.FlatSpec
 import org.scalatest.prop.Checkers
-import play.api.libs.json.{JsSuccess, Json, OFormat, Reads}
+import play.api.libs.json._
 
 class MacroSpec extends FlatSpec with Checkers {
 
@@ -29,7 +29,7 @@ class MacroSpec extends FlatSpec with Checkers {
     }
   }
 
-  "Format Macro" should "correctly handle optional fields" in {
+  it should "correctly handle optional fields" in {
     // Given
     @JsonFormat
     case class Testing(a: Int, b: String, c: Option[Int])
@@ -48,6 +48,86 @@ class MacroSpec extends FlatSpec with Checkers {
 
         // Then
         readValue == JsSuccess(value)
+    }
+  }
+
+  it should "support adding arbitrary constraints on mandatory fields" in {
+    // Given
+    @JsonFormat
+    case class Testing(a: Int, b: String)
+    object Testing {
+      val macroFormat: OFormat[Testing] = preparedFormat
+        .bRead(Reads.minLength[String](4))
+        .build
+
+      val handFormat: OFormat[Testing] = {
+        import play.api.libs.functional.syntax._
+        import play.api.libs.json._
+        OFormat(
+          (
+            (__ \ "a").read[Int] and
+            (__ \ "b").read[String](Reads.minLength[String](4))
+          )(Testing.apply _),
+          (
+            (__ \ "a").write[Int] and
+            (__ \ "b").write[String]
+          )(unlift(Testing.unapply))
+        )
+      }
+    }
+
+    check {
+      (a: Int, b: String, c: Option[Int]) =>
+        val value = Testing(a, b)
+        val jsonValue = Json.obj("a" -> a, "b" -> b)
+
+        // When
+        val macroRead = Testing.macroFormat.reads(jsonValue)
+        val handRead = Testing.handFormat.reads(jsonValue)
+
+        // Then
+        macroRead == handRead
+    }
+  }
+
+  it should "support adding arbitrary constraints on optional fields" in {
+    // Given
+    @JsonFormat
+    case class Testing(a: Int, b: Option[String])
+    object Testing {
+      val macroFormat: OFormat[Testing] = preparedFormat
+        .bRead(Reads.minLength[String](4))
+        .build
+
+      val handFormat: OFormat[Testing] = {
+        import play.api.libs.functional.syntax._
+        import play.api.libs.json._
+        OFormat(
+          (
+            (__ \ "a").read[Int] and
+            (__ \ "b").readNullable[String](Reads.minLength[String](4))
+            )(Testing.apply _),
+          (
+            (__ \ "a").write[Int] and
+            (__ \ "b").writeNullable[String]
+          )(unlift(Testing.unapply))
+        )
+      }
+    }
+
+    check {
+      (a: Int, b: Option[String]) =>
+        val value = Testing(a, b)
+        val jsonValue = Json.obj("a" -> a) ++ b
+          .map(bValue => Json.obj("b" -> bValue))
+          .getOrElse(Json.obj())
+
+        // When
+        val macroRead = Testing.macroFormat.reads(jsonValue)
+        val handRead = Testing.handFormat.reads(jsonValue)
+
+        // Then
+        macroRead == handRead
     }
   }
 }

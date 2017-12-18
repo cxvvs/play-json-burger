@@ -1,5 +1,7 @@
 package org.cxvvs.playjson.macros
 
+import play.api.libs.json.JsPath
+
 import scala.annotation.compileTimeOnly
 import scala.collection.immutable.Seq
 import scala.meta._
@@ -27,27 +29,29 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
     }
 
     // Call `.format` or `.formatNullable` on a JsPath
-    def fieldFormat(jsPath: Term, argType: Type.Arg): Term.ApplyType = {
+    def fieldFormat(jsPath: Term, fieldName: String, argType: Type.Arg): Term.Apply = {
       val TypeInfo(typeName, isOption) = JsonFormat.getType(argType)
+      val readConstraint = Term.Name(s"read$fieldName")
 
       if(isOption)
-        q"$jsPath.formatNullable[$typeName]"
+        q"JsonFormat.withConstraintOpt($jsPath, $jsPath.formatNullable[$typeName], $readConstraint)"
       else
-        q"$jsPath.format[$typeName]"
+        q"$jsPath.format[$typeName]($readConstraint.getOrElse(implicitly[Reads[$typeName]]))"
     }
 
     def createFormat(className: Type.Name, ctor: Ctor.Primary): Defn.Def = {
-      val paramsFormat: Seq[Term.ApplyType] = ctor.paramss.head
+      val paramsFormat: Seq[Term.Apply] = ctor.paramss.head
         .map { parameter =>
           val fieldName: String = parameter.name.value
           val jsPath: Term = q"""(play.api.libs.json.JsPath \ $fieldName)"""
-          fieldFormat(jsPath, parameter.decltpe.get)
+          fieldFormat(jsPath, fieldName, parameter.decltpe.get)
         }
 
       val concatParams: Term = paramsFormat
         .tail
         .foldLeft[Term](paramsFormat.head) {
-          case (acc, current) => q"$acc and $current"
+          case (acc, current) =>
+            q"""$acc and $current"""
         }
 
       def readFields(getFieldName: (String) => Term.Name): Seq[Defn.Val] = ctor.paramss.head
@@ -110,7 +114,7 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
             }
          """
 
-      val result = q"""
+      q"""
         def preparedFormat: PreparedFormat =
           new PreparedFormat {
 
@@ -123,10 +127,6 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
             $buildIncantation;
           }
       """
-
-      println(result)
-
-      result
     }
 
     defn match {
@@ -150,9 +150,9 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
   }
 }
 
-private[macros] object JsonFormat {
+object JsonFormat {
 
-  def getType(argType: Type.Arg): TypeInfo = {
+  private[macros] def getType(argType: Type.Arg): TypeInfo = {
     val option = """Option\[(.+)]""".r
 
     argType.syntax match {
@@ -163,6 +163,32 @@ private[macros] object JsonFormat {
       case rawType =>
         val tpe = Type.Name(rawType)
         TypeInfo(tpe, isOption = false)
+    }
+  }
+
+  import play.api.libs.json.{OFormat, Reads, JsValue, JsResult, JsObject}
+
+  /**
+    * The technique used for format doesn't work for `formatNullable`
+    * because `.formatNullable[T](r: Reads[T])` does not exist
+    *
+    * This function manually handles that case
+    */
+  def withConstraintOpt[T : Reads](
+    jsPath: JsPath,
+    format: OFormat[Option[T]],
+    optReads: Option[Reads[T]]
+  ): OFormat[Option[T]] = {
+    new OFormat[Option[T]] {
+      def reads(json: JsValue): JsResult[Option[T]] = {
+        val originalReads: Reads[Option[T]] = Reads(format.reads)
+        optReads
+          .map(reads => Reads.nullable(jsPath)(implicitly[Reads[T]]))
+          .getOrElse(originalReads)
+          .reads(json)
+      }
+      def writes(o: Option[T]): JsObject =
+        format.writes(o)
     }
   }
 }
