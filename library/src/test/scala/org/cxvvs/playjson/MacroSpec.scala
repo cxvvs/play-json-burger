@@ -130,4 +130,39 @@ class MacroSpec extends FlatSpec with Checkers {
         macroRead == handRead
     }
   }
+
+  it should "support type aliases" in {
+    // Given
+    @JsonFormat
+    case class Testing(id: Testing.Id, b: String)
+    object Testing {
+      type Id = Int
+      val macroFormat: OFormat[Testing] = preparedFormat
+        .idRead(Reads.min(1))
+        .build
+
+      val handFormat: OFormat[Testing] = {
+        import play.api.libs.functional.syntax._
+        import play.api.libs.json._
+          (
+            (__ \ "id").format[Id](Reads.min(1)) and
+            (__ \ "b").format[String]
+          )(Testing.apply, unlift(Testing.unapply))
+      }
+    }
+
+    check {
+      (a: Testing.Id, b: String) =>
+        val value = Testing(a, b)
+        val jsonValue = Json.obj("a" -> a, "b" -> b)
+
+        // When
+        val macroRead = Testing.macroFormat.reads(jsonValue)
+        val handRead = Testing.handFormat.reads(jsonValue)
+
+        // Then
+        macroRead == handRead
+    }
+  }
+
 }
