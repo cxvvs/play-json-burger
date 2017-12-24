@@ -10,23 +10,6 @@ import scala.meta._
 class JsonFormat extends scala.annotation.StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
 
-    def declarePreparedTrait(className: Type.Name, ctor: Ctor.Primary): Defn.Trait = {
-
-      val readsModifiers: Seq[Decl.Def] = ctor.paramss.head
-        .map { parameter =>
-          val fieldName: String = parameter.name.value
-          val TypeInfo(typeName, _) = Helpers.getType(parameter.decltpe.get)
-          val methodName: Term.Name = Term.Name(s"${fieldName}Read")
-          q"def $methodName(reads: play.api.libs.json.Reads[$typeName]): PreparedFormat"
-        }
-
-      q"""
-        trait PreparedFormat {
-          ..$readsModifiers;
-          def build: play.api.libs.json.OFormat[$className]
-        }
-       """
-    }
 
     // Call `.format` or `.formatNullable` on a JsPath
     def fieldFormat(jsPath: Term, fieldName: String, argType: Type.Arg): Term.Apply = {
@@ -135,7 +118,7 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
         companion: Defn.Object
       )) =>
         val stats: Seq[Stat] =
-          declarePreparedTrait(className, ctor) +:
+          Helpers.declareTrait(className, ctor) +:
           createFormat(className, ctor) +:
           companion.templ.stats.getOrElse(Nil)
         val template: Template = companion.templ.copy(stats = Some(stats))
@@ -151,6 +134,28 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
 }
 
 private[macros] object Helpers {
+
+  /**
+    * Declares a `PreparedFormat` trait internal to the annotated class' companion object.
+    * The trait defines for every field `x` of the class a method `xRead` equivalent to a case class `copy`
+    */
+  def declareTrait(className: Type.Name, ctor: Ctor.Primary): Defn.Trait = {
+
+    val readsModifiers: Seq[Decl.Def] = ctor.paramss.head
+      .map { parameter =>
+        val fieldName: String = parameter.name.value
+        val TypeInfo(typeName, _) = Helpers.getType(parameter.decltpe.get)
+        val methodName: Term.Name = Term.Name(s"${fieldName}Read")
+        q"def $methodName(reads: play.api.libs.json.Reads[$typeName]): PreparedFormat"
+      }
+
+    q"""
+        trait PreparedFormat {
+          ..$readsModifiers;
+          def build: play.api.libs.json.OFormat[$className]
+        }
+       """
+  }
 
   def getType(argType: Type.Arg): TypeInfo = {
     val option = """Option\[(.+)]""".r
