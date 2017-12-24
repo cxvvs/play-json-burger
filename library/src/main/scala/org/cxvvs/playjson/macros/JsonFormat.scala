@@ -13,7 +13,7 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
 
     // Call `.format` or `.formatNullable` on a JsPath
     def fieldFormat(jsPath: Term, fieldName: String, argType: Type.Arg): Term.Apply = {
-      val TypeInfo(typeName, isOption) = Helpers.getType(argType)
+      val TypeInfo(typeName, isOption) = Helpers.typeInfo(argType)
       val readConstraint = Term.Name(s"read$fieldName")
 
       if(isOption)
@@ -40,7 +40,7 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
       def readFields(getFieldName: (String) => Term.Name): Seq[Defn.Val] = ctor.paramss.head
         .map { parameter =>
           val fieldName: String = parameter.name.value
-          val TypeInfo(typeName, _) = Helpers.getType(parameter.decltpe.get)
+          val TypeInfo(typeName, _) = Helpers.typeInfo(parameter.decltpe.get)
           val patVarTerm: Pat.Var.Term = Pat.Var.Term(Term.Name(s"read$fieldName"))
           q"val $patVarTerm: Option[play.api.libs.json.Reads[$typeName]] = ${getFieldName(fieldName)}"
         }
@@ -49,7 +49,7 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
       val readModifiers: Seq[Defn.Def] = ctor.paramss.head
         .map { parameter =>
           val fieldName: String = parameter.name.value
-          val TypeInfo(typeName, _) = Helpers.getType(parameter.decltpe.get)
+          val TypeInfo(typeName, _) = Helpers.typeInfo(parameter.decltpe.get)
           val methodName: Term.Name = Term.Name(s"${fieldName}Read")
           val readFieldName: Term.Name = Term.Name(s"replace$fieldName")
           q"""
@@ -62,7 +62,7 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
         .map { ctorParameter =>
           // Parameter name : replaceXXX
           val parameterName: Term.Param.Name = Term.Name(s"replace${ctorParameter.name}")
-          val TypeInfo(typeName, _) = Helpers.getType(ctorParameter.decltpe.get)
+          val TypeInfo(typeName, _) = Helpers.typeInfo(ctorParameter.decltpe.get)
           val readType: Type.Name = Type.Name(s"Option[play.api.libs.json.Reads[$typeName]]")
 
           // Default value : readXXX
@@ -144,7 +144,7 @@ private[macros] object Helpers {
     val readsModifiers: Seq[Decl.Def] = ctor.paramss.head
       .map { parameter =>
         val fieldName: String = parameter.name.value
-        val TypeInfo(typeName, _) = Helpers.getType(parameter.decltpe.get)
+        val TypeInfo(typeName, _) = Helpers.typeInfo(parameter.decltpe.get)
         val methodName: Term.Name = Term.Name(s"${fieldName}Read")
         q"def $methodName(reads: play.api.libs.json.Reads[$typeName]): PreparedFormat"
       }
@@ -157,7 +157,12 @@ private[macros] object Helpers {
        """
   }
 
-  def getType(argType: Type.Arg): TypeInfo = {
+  /**
+    * Returns the type name :
+    *  - Unwrapped if it's an option
+    *  - Unchanged otherwise (identity)
+    */
+  def typeInfo(argType: Type.Arg): TypeInfo = {
     val option = """Option\[(.+)]""".r
 
     argType.syntax match {
