@@ -39,9 +39,10 @@ the macro can not be used anymore and you need to do define your format manually
   )
 ```
 
-Manual definition for reads / writes / format becomes really tedious as more fields are added.  
+Manual definition for reads / writes / format can become really tedious as more fields are added.  
+
 What if we could say something like "I want the macro behavior with a few added constraints" ?  
-With Burger you can do that in a totally safe way :
+With Burger you can do that in a type-safe way :
 
 ```scala
 import org.cxvvs.playjson.macros.JsonFormat
