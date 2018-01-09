@@ -57,7 +57,9 @@ class MacroSpec extends FlatSpec with Checkers {
     case class Testing(a: Int, b: String)
     object Testing {
       val macroFormat: OFormat[Testing] = defaultFormat
-        .bRead(Reads.minLength[String](4))
+        .reads(
+          b = Some(Reads.minLength[String](4))
+        )
         .build
 
       val handFormat: OFormat[Testing] = {
@@ -96,7 +98,9 @@ class MacroSpec extends FlatSpec with Checkers {
     case class Testing(a: Int, b: Option[String])
     object Testing {
       val macroFormat: OFormat[Testing] = defaultFormat
-        .bRead(Reads.minLength[String](4))
+        .reads(
+          b = Some(Reads.minLength[String](4))
+        )
         .build
 
       val handFormat: OFormat[Testing] = {
@@ -138,7 +142,9 @@ class MacroSpec extends FlatSpec with Checkers {
     object Testing {
       type Id = Int
       val macroFormat: OFormat[Testing] = defaultFormat
-        .idRead(Reads.min(1))
+        .reads(
+          id = Some(Reads.min(1))
+        )
         .build
 
       val handFormat: OFormat[Testing] = {

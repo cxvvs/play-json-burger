@@ -33,27 +33,28 @@ class JsonFormat extends scala.annotation.StaticAnnotation {
 
 private[macros] object Helpers {
 
+  private def readsParam(ctor: Ctor.Primary): Seq[Term.Param] = {
+    ctor.paramss.head
+      .map { parameter =>
+        val fieldName = parameter.name
+        val TypeInfo(typeName, _) = Helpers.typeInfo(parameter.decltpe.get)
+        param"$fieldName: Option[play.api.libs.json.Reads[$typeName]] = None"
+      }
+  }
+
   /**
     * Declares a `PreparedFormat` trait internal to the annotated class' companion object.
-    * The trait defines for every field `x` of the class a method `xRead` equivalent to a case class `copy`
+    * The trait defines a `read` method that allows specifying a [[play.api.libs.json.Reads]] for any field of the class
     * and also a terminal method call `build` to construct the final [[play.api.libs.json.OFormat]]
     */
   def declareTrait(className: Type.Name, ctor: Ctor.Primary): Defn.Trait = {
 
-    val readsModifiers: Seq[Decl.Def] = ctor.paramss.head
-      .map { parameter =>
-        val fieldName: String = parameter.name.value
-        val TypeInfo(typeName, _) = Helpers.typeInfo(parameter.decltpe.get)
-        val methodName: Term.Name = Term.Name(s"${fieldName}Read")
-        q"def $methodName(reads: play.api.libs.json.Reads[$typeName]): PreparedFormat"
-      }
-
     q"""
         trait PreparedFormat {
-          ..$readsModifiers;
+          def reads(..${readsParam(ctor)}): PreparedFormat
           def build: play.api.libs.json.OFormat[$className]
         }
-       """
+    """
   }
 
   /** Defines the `PreparedFormat` implementation
@@ -94,18 +95,20 @@ private[macros] object Helpers {
         q"val $patVarTerm: Option[play.api.libs.json.Reads[$typeName]] = ${getFieldName(fieldName)}"
       }
 
-    // TODO : Remove copy paste (defined in trait)
-    val readModifiers: Seq[Defn.Def] = ctor.paramss.head
-      .map { parameter =>
-        val fieldName: String = parameter.name.value
-        val TypeInfo(typeName, _) = Helpers.typeInfo(parameter.decltpe.get)
-        val methodName: Term.Name = Term.Name(s"${fieldName}Read")
-        val readFieldName: Term.Name = Term.Name(s"replace$fieldName")
-        q"""
-              def $methodName(reads: play.api.libs.json.Reads[$typeName]): PreparedFormat =
-                this.copy($readFieldName = Some(reads))
-            """
-      }
+    val readsModifiers: Defn.Def = {
+      val assignations: Seq[Term.Assign] = ctor.paramss.head
+        .map { parameter =>
+          val fieldName: Term.Name = Term.Name(parameter.name.value)
+          val readFieldName: Term.Name = Term.Name(s"replace$fieldName")
+
+          q"""$readFieldName = $fieldName"""
+        }
+
+      q"""
+          def reads(..${readsParam(ctor)}): PreparedFormat =
+            this.copy(..$assignations )
+        """
+    }
 
     val copyFields: Seq[Term.Param] = ctor.paramss.head
       .map { ctorParameter =>
@@ -140,7 +143,7 @@ private[macros] object Helpers {
       q"""
             def originalCopy(..$copyFields): PreparedFormat = new PreparedFormat {
               ..${readFields(fieldName => Term.Name(s"replace$fieldName"))}
-              ..$readModifiers
+              $readsModifiers
               $copyIncantation
               $buildIncantation
             }
@@ -151,7 +154,7 @@ private[macros] object Helpers {
           new PreparedFormat {
 
             ..${readFields(_ => q"None")};
-            ..$readModifiers;
+            $readsModifiers
 
             $originalCopyMethod;
             $copyIncantation;
