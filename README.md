@@ -50,7 +50,7 @@ import org.cxvvs.playjson.macros.JsonFormat
 case class User(id: UUID, age: Int, name: String, description: Option[String])
 
 object User {
-  implicit val format: OFormat[User] = preparedFormat
+  implicit val format: OFormat[User] = defaultFormat
       .ageRead(Reads.min[Int](0))
       .nameRead(Reads.minLength[String](3))
       .descriptionRead(Reads.min[String](1))

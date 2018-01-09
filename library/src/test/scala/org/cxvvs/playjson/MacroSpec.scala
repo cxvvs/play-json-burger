@@ -12,7 +12,7 @@ class MacroSpec extends FlatSpec with Checkers {
     @JsonFormat
     case class Testing(a: Int, b: String)
     object Testing {
-      implicit val format: OFormat[Testing] = preparedFormat.build
+      implicit val format: OFormat[Testing] = defaultFormat.build
     }
 
     check {
@@ -34,7 +34,7 @@ class MacroSpec extends FlatSpec with Checkers {
     @JsonFormat
     case class Testing(a: Int, b: String, c: Option[Int])
     object Testing {
-      implicit val format: OFormat[Testing] = preparedFormat.build
+      implicit val format: OFormat[Testing] = defaultFormat.build
     }
 
     check {
@@ -56,7 +56,7 @@ class MacroSpec extends FlatSpec with Checkers {
     @JsonFormat
     case class Testing(a: Int, b: String)
     object Testing {
-      val macroFormat: OFormat[Testing] = preparedFormat
+      val macroFormat: OFormat[Testing] = defaultFormat
         .bRead(Reads.minLength[String](4))
         .build
 
@@ -95,7 +95,7 @@ class MacroSpec extends FlatSpec with Checkers {
     @JsonFormat
     case class Testing(a: Int, b: Option[String])
     object Testing {
-      val macroFormat: OFormat[Testing] = preparedFormat
+      val macroFormat: OFormat[Testing] = defaultFormat
         .bRead(Reads.minLength[String](4))
         .build
 
@@ -137,7 +137,7 @@ class MacroSpec extends FlatSpec with Checkers {
     case class Testing(id: Testing.Id, b: String)
     object Testing {
       type Id = Int
-      val macroFormat: OFormat[Testing] = preparedFormat
+      val macroFormat: OFormat[Testing] = defaultFormat
         .idRead(Reads.min(1))
         .build
 

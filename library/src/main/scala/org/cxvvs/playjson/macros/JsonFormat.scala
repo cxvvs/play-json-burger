@@ -147,7 +147,7 @@ private[macros] object Helpers {
          """
 
     q"""
-        def preparedFormat: PreparedFormat =
+        def defaultFormat: PreparedFormat =
           new PreparedFormat {
 
             ..${readFields(_ => q"None")};
