@@ -56,9 +56,15 @@ class MacroSpec extends FlatSpec with Checkers {
     @JsonFormat
     case class Testing(a: Int, b: String)
     object Testing {
+      object Constraints {
+        val a = Reads.min(1337)
+        val b = Reads.minLength[String](4)
+      }
+
       val macroFormat: OFormat[Testing] = defaultFormat
         .reads(
-          b = Some(Reads.minLength[String](4))
+          a = Some(Constraints.a),
+          b = Some(Constraints.b)
         )
         .build
 
@@ -67,8 +73,8 @@ class MacroSpec extends FlatSpec with Checkers {
         import play.api.libs.json._
         OFormat(
           (
-            (__ \ "a").read[Int] and
-            (__ \ "b").read[String](Reads.minLength[String](4))
+            (__ \ "a").read[Int](Constraints.a) and
+            (__ \ "b").read[String](Constraints.b)
           )(Testing.apply _),
           (
             (__ \ "a").write[Int] and
